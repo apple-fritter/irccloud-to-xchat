@@ -1,6 +1,8 @@
-# logconvert.irccloud-to-xchat
+# irccloud-to-xchat
 
 This is a Rust program that converts IRC logs from the IRCcloud format to the XChat format. It uses the `zip` crate to extract the logs from a ZIP archive and write them to separate log files.
+
+I have also formed a program to convert IRCCloud logs to the [Weechat](https://github.com/apple-fritter/logconvert.irccloud-to-weechat) format.
 
 ## Installation
 
