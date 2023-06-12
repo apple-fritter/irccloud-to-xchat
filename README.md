@@ -1,25 +1,70 @@
 # irccloud-to-xchat
+This program demonstrates how `Rust` can be used to work with files and archives, parse data, and write data to files. In this implementation, we use Rust to convert an `IRCCloud` log export to the `XChat` log format.
 
-This is a Rust program that converts IRC logs from the IRCcloud format to the XChat format. It uses the `zip` crate to extract the logs from a ZIP archive and write them to separate log files.
+---
 
-I have also formed a program to convert IRCCloud logs to the [Weechat](https://github.com/apple-fritter/logconvert.irccloud-to-weechat) format.
+## How it works
+1. This Rust program reads the contents of a zip and extracts text files with the .txt extension. It then processes the contents of each file, parsing the lines and extracting relevant information. The program then creates a new file in the same directory as the original file, with a .xchatlog extension, containing the parsed information.
 
-## Installation
+2. The program uses several Rust standard library modules, including std::env, std::fs, std::io, and std::path, as well as the zip crate for working with zip files.
 
-1. Install Rust and Cargo on your system.
-2. Clone this repository: `git clone https://github.com/yourusername/my-irccloud-to-xchat-converter.git`
-3. Navigate to the repository: `cd my-irccloud-to-xchat-converter`
-4. Run the program: `cargo run`
+3. The `main()` function opens the zip file using `File::open()` and creates a `ZipArchive` object from the opened file. It then iterates over the files in the archive using a `for` loop and the `archive.len()` method.
+
+4. For each file, the program uses the `by_index()` method of the ZipArchive object to obtain a file handle, which is then used to create a `BufReader` to read the contents of the file. The program then creates a new file with a name that matches the original file, but with a `.xchatlog` extension, using the `File::create()` method.
+
+5. The program then iterates over the lines of the file using the `lines()` method of the BufReader. For each line, the program splits the line into three parts using the `splitn()` method of the `str` type. If the line does not contain enough information, the program skips it. Otherwise, the program extracts the `timestamp` and `message` from the line and formats them into a string. The formatted message is then written to the output file using the `writeln!()` macro.
+
+---
+
+## Concerns
+### Error handling:
+While the program does use `unwrap()` in several places to simplify the code, this can cause the program to panic if an error occurs. It might be better to use `Result` and `match` statements to handle errors in a more controlled way.
+### Performance:
+Depending on the size and number of files in the zip archive, this program might be slow or use a lot of memory. It might be worth optimizing the program to handle larger archives or implementing some kind of parallel processing.
+### File path handling:
+The program assumes that the input zip file is located in the current directory and that the output files should be written to the same directory. This might not always be the case, and the program might fail if it encounters unexpected file paths.
+### File extension handling:
+The program only looks for files with the .txt extension and skips any other files in the archive. This might not be sufficient if there are other kinds of files in the archive that need to be processed.
+### Encoding handling:
+The program assumes that the input files are encoded in `UTF-8`, which might not always be the case. It might be worth adding support for different encodings or detecting the encoding of the input files automatically.
+
+---
 
 ## Usage
 
-The program takes two arguments: the path to the input ZIP archive and the path to the output directory. Here's an example:
-
-```bash
-cargo run --release -- <input_zip> <output_dir>
+To use the program, provide the input zip file as a command-line argument:
+```shell
+irccloud-to-xchat <input_zip>
 ```
 
-Replace `<input_zip>` with the path to your input ZIP archive and `<output_dir>` with the path to the directory where you want to save the output log files.
+> The program will process the files in the zip archive and generate corresponding XChat log files with the .xchatlog extension.
+
+---
+
+## Flowchart
+```
+┌─ Start Program
+│
+├─ Read Command-line Arguments
+│   ├─ Check if Arguments Provided
+│   │   └─ [Arguments Missing]
+│   └─ Parse Input and Output Paths
+│
+├─ Convert IRCcloud Log to XChat Log
+│   ├─ Open Input File
+│   ├─ Open Output File
+│   ├─ Read Input File Line by Line
+│   │   ├─ Parse IRCcloud Line
+│   │   │   ├─ [Line Valid]
+│   │   │   │   └─ Format XChat Line
+│   │   │   │
+│   │   │   └─ [Line Invalid]
+│   │   └─ [Error Reading Line]
+│   ├─ Write Formatted XChat Line to Output File
+│   └─ [End of Input File]
+│
+└─ End Program
+```
 
 ## IRC Meta
 
