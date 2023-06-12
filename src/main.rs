@@ -1,34 +1,75 @@
+use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
-use zip::read::ZipArchive;
-use std::path::Path;
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::path::{Path, PathBuf};
+use regex::Regex;
 
-fn convert_irccloud_to_xchat(input_zip: &str, output_dir: &str) -> std::io::Result<()> {
-    let zip_file = File::open(input_zip)?;
-    let mut zip = ZipArchive::new(zip_file)?;
+// Structure to represent an XChat line
+struct XChatLine {
+    timestamp: String,
+    sender: String,
+    message: String,
+}
 
-    for i in 0..zip.len() {
-        let mut file = zip.by_index(i)?;
-        let file_name = file.name();
-        let channel = file_name.split("/").last().unwrap();
-        let output_file = format!("{}/{}.log", output_dir, channel);
+// Function to parse an IRCcloud log line into an XChat line
+fn parse_irccloud_line(line: &str) -> Option<XChatLine> {
+    let re = Regex::new(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\t<([^>]+)>\t(.*)$").unwrap();
+    if let Some(captures) = re.captures(line) {
+        let timestamp = captures[1].to_string();
+        let sender = captures[2].to_string();
+        let message = captures[3].to_string();
 
-        let mut output = File::create(output_file)?;
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            let line = line?;
-            let line_parts: Vec<&str> = line.split(" ").collect();
-            let timestamp = line_parts[0];
-            let nickname = line_parts[1];
-            let message = line_parts[2..].join(" ");
+        Some(XChatLine {
+            timestamp,
+            sender,
+            message,
+        })
+    } else {
+        None
+    }
+}
 
-            writeln!(
-                output,
-                "{} <{}> {}",
-                timestamp, nickname, message
-            )?;
+// Function to convert an IRCcloud log file to XChat log format
+fn convert_to_xchat(input_path: &Path, output_path: &Path) -> std::io::Result<()> {
+    let input_file = File::open(input_path)?;
+    let output_file = File::create(output_path)?;
+    let reader = BufReader::new(input_file);
+    let mut writer = BufWriter::new(output_file);
+
+    for line in reader.lines() {
+        if let Ok(line) = line {
+            if let Some(xchat_line) = parse_irccloud_line(&line) {
+                let formatted_line = format!(
+                    "[{}] {}\t{}",
+                    xchat_line.timestamp, xchat_line.sender, xchat_line.message
+                );
+                writer.write_all(formatted_line.as_bytes())?;
+                writer.write_all(b"\n")?;
+            }
         }
     }
 
+    writer.flush()?;
+
     Ok(())
+}
+
+fn main() {
+    // Read command-line arguments
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 3 {
+        println!("Usage: irccloud-to-xchat <input_file> <output_file>");
+        return;
+    }
+
+    // Parse input and output file paths
+    let input_path = Path::new(&args[1]);
+    let output_path = Path::new(&args[2]);
+
+    // Convert IRCcloud log to XChat log
+    if let Err(err) = convert_to_xchat(input_path, output_path) {
+        println!("Error: {}", err);
+    } else {
+        println!("Conversion complete.");
+    }
 }
